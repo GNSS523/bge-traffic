@@ -113,7 +113,7 @@ class Way:
 
         return obpos
 
-    def reach(self, car):     #增加一个小车
+    def reach(self, car):     
         self.cars.insert(0, car)
 
     def leave(self, car):    #小车消失
@@ -196,13 +196,14 @@ class Vehicle:
             self.way.leave(self)
             self.pos -= self.way.length
             if self.way.to:
+                print('#################################'+ str(self.pos) )
                 self.way = choice(self.way.to)
                 self.way.reach(self)
             else:
+                print('***********************************************')
                 self.on_dead_end()
 
         w = self.way
-
 
         # Reach top speed / Decelerate to top speed
         if self.speed < w.speed_limit * self.speed_mul:
@@ -220,6 +221,7 @@ class Vehicle:
         if self.speed < 0.:
             self.speed = 0.
         self.pos += self.speed * dt
+        #print("Vehicle : "+  str(self.pos)  +'   '+   str(self.way.length)  )
         #print('>>>>>>>>>>>>>8888888888888888>>>>>>>>>>>>>>')
         #print(self.pos)
         #print('>>>>>>>>>>>>>8888888888888888>>>>>>>>>>>>>>')

@@ -222,6 +222,9 @@ class Car(bge.types.KX_GameObject, Vehicle):
         dy = self.y - self.yp
         if dx*dx + dy*dy > 0.:
             self.rot = atan2(dy, dx)
+        #print('*********************************')
+        #print(self.worldPosition)
+        #print('*********************************')
 
         xyz = self.localOrientation.to_euler()
         xyz[2] = self.rot
