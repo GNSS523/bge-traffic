@@ -38,6 +38,7 @@ from cityengine import LinearWay, BezierWay, Intersection, Vehicle
 cell_size = 2.
 cs = cell_size / 2.
 ct = cell_size / 4.
+
 global z
 z = 0
 
@@ -300,3 +301,23 @@ class Master:
 M = Master()
 M.link_roads()
 update_master = lambda: M.update()
+
+
+M = Master()
+M.link_roads()
+update_master = lambda: M.update()
+
+cont = bge.logic.getCurrentController()
+own = cont.owner
+scene = bge.logic.getCurrentScene()
+if not 'init' in own:
+    own['init'] = 1
+    own['counter'] = 0
+
+own['counter'] += 1
+
+    ######### APPROACH #1
+    # get frame using makeScreenshot()
+frame_filename = "//frame" + str(own['counter']) + ".png"
+bge.render.makeScreenshot(frame_filename)
+
