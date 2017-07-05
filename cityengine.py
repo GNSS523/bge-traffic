@@ -51,9 +51,6 @@ class Intersection:
         self.stop_time = 2. # Yellow traffic light
 
     def update(self, dt):
-        #print('>>>>>>>>66666666>>>>>>>>>>')
-        #print(dt)
-        #print('>>>>>>>>66666666>>>>>>>>>>')
         self.t -= dt
 
         if self.t < 0.:
@@ -76,15 +73,12 @@ class Way:
         self.to = [] # Directed graph neighbors
         self.cars = []
 
-    def next_car(self, car):                  #查询第二辆小车的位置
+    def next_car(self, car):                  #查询小车的位置
         """Picks the next [pos, car] from self and self.to"""
         self.cars.sort(key=lambda car: car.pos)
         i = self.cars.index(car)
         if i + 1 < len(self.cars):
             car2 = self.cars[i + 1]
-            #print('>>>>>>>>>5555555555555>>>>>>>>>>>')
-            #print(car2)
-            #print('>>>>>>>>>5555555555555>>>>>>>>>>>')
             return car2.pos, car2
 
         elif self.to and self.to[0].cars: # TODO foresee where car goes
@@ -107,10 +101,9 @@ class Way:
                 obpos = self.length
 
         next_car_pos, _ = self.next_car(car)
+        #print( str(next_car_pos) +"                 "+ str(car.pos) )
         if next_car_pos and next_car_pos < obpos:
             obpos = next_car_pos
-            #print(obpos)
-
         return obpos
 
     def reach(self, car):     
@@ -195,12 +188,15 @@ class Vehicle:
         if self.pos > self.way.length:
             self.way.leave(self)
             self.pos -= self.way.length
+            #for obj in self.way.to :
+              #  print(obj)
             if self.way.to:
-                print('#################################'+ str(self.pos) )
+                #print('#################################'+ str(self.pos) )
                 self.way = choice(self.way.to)
+                #print( str(self.way.to[0].x1) +"                   " + str(self.way.to[0].y1) )
                 self.way.reach(self)
             else:
-                print('***********************************************')
+                #print('***********************************************')
                 self.on_dead_end()
 
         w = self.way
