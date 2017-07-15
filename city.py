@@ -1,15 +1,12 @@
 """Copyright (c) 2015 Francesco Mastellone
-
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
 in the Software without restriction, including without limitation the rights
 to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 copies of the Software, and to permit persons to whom the Software is
 furnished to do so, subject to the following conditions:
-
 The above copyright notice and this permission notice shall be included in
 all copies or substantial portions of the Software.
-
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -22,7 +19,6 @@ THE SOFTWARE.
 """
 "east": increasing x
 "north": increasing y
-
 """
 
 import time
@@ -34,6 +30,13 @@ from bge import logic
 
 from cityengine import LinearWay, BezierWay, Intersection, Vehicle
 
+import sys
+sys.path.append('/usr/local/lib/python2.7/dist-packages')
+import paho.mqtt.client as mqtt
+
+import threading
+import socket
+from threading import Timer
 
 cell_size = 2.
 cs = cell_size / 2.
@@ -41,6 +44,8 @@ ct = cell_size / 4.
 
 global z
 z = 0
+global a
+a=0
 
 scene = logic.getCurrentScene()
 
@@ -195,6 +200,7 @@ class RoadX(Road):
         self.intersection.update(dt)
 
 
+
 class Car(bge.types.KX_GameObject, Vehicle):
     length = .7
     acceleration = 7.84 / 9.
@@ -237,6 +243,7 @@ class Car(bge.types.KX_GameObject, Vehicle):
     def on_dead_end(self):
         M.cars.remove(self)
         self.endObject()
+
 
 class Master:
     def __init__(self):
@@ -284,12 +291,16 @@ class Master:
                      'Car_Blue_proxy'
                     )
                 )
-                if z <=0 :
+
+
+                if z <=2 and m.message == "b'1'":
                     obj = scene.addObject(kind, self.roads[0])
                     car = Car(obj, way=s)
                     self.cars.add(car)
                     s.reach(car)
                     z=z+1
+                    m.message=''
+
 
 
         for r in self.roads:
@@ -298,26 +309,71 @@ class Master:
         for c in self.cars.copy():
             c.update(dt)
 
+
+
+class mqttThread(threading.Thread):
+    def __init__(self):
+        threading.Thread.__init__(self)
+        try:
+            self.mqtt_client = mqtt.Client()
+            self.mqtt_client.on_connect = self.mqtt_on_connect
+            self.mqtt_client.on_message = self.mqtt_on_message
+            self.message=''
+            self.mqtt_client.connect('192.168.3.24', 1883, 60)
+
+            
+        except socket.gaierror:
+            print ('No Connection')
+        #self.fallbackLoopTime = fallbackLoopTime
+        
+
+    def stopped(self):
+        return self.event.isSet()
+
+    def stop(self):
+        self.event.set()
+
+
+    def mqtt_on_connect(self,client, userdata,flags, rc):
+        self.mqtt_client.subscribe('addcar')
+
+
+    def mqtt_on_message(self,client, userdata, msg):
+        self.message = str(msg.payload)
+        #print (message)
+        # if message == "b'1'":
+        #     print('YES')
+
+    def publish(pos):
+        self.client.publish("get_pos",pos)
+
+
+    def run(self):
+        self.mqtt_client.loop_start()
+        #self.event.wait(self.interval)
+
+
+
 M = Master()
 M.link_roads()
 update_master = lambda: M.update()
 
+m = mqttThread()
+m.run()
 
-M = Master()
-M.link_roads()
-update_master = lambda: M.update()
 
-cont = bge.logic.getCurrentController()
-own = cont.owner
-scene = bge.logic.getCurrentScene()
-if not 'init' in own:
-    own['init'] = 1
-    own['counter'] = 0
 
-own['counter'] += 1
 
+#cont = bge.logic.getCurrentController()
+#own = cont.owner
+#scene = bge.logic.getCurrentScene()
+#if not 'init' in own:
+#    own['init'] = 1
+#   own['counter'] = 0
+#
+#own['counter'] += 1
+#
     ######### APPROACH #1
     # get frame using makeScreenshot()
-frame_filename = "//frame" + str(own['counter']) + ".png"
-bge.render.makeScreenshot(frame_filename)
-
+#frame_filename = "//frame" + str(own['counter']) + ".png"
+#bge.render.makeScreenshot(frame_filename)
