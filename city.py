@@ -38,6 +38,9 @@ import threading
 import socket
 from threading import Timer
 
+import requests
+import logging
+
 cell_size = 2.
 cs = cell_size / 2.
 ct = cell_size / 4.
@@ -229,9 +232,12 @@ class Car(bge.types.KX_GameObject, Vehicle):
         dy = self.y - self.yp
         if dx*dx + dy*dy > 0.:
             self.rot = atan2(dy, dx)
-        #print('*********************************')
-        #print(self.worldPosition)
-        #print('*********************************')
+        # print('*********************************')
+        # print(self.worldPosition.x)
+        # print('*********************************')
+
+        str_pos=str(self.worldPosition.x)+'_'+str(self.worldPosition.y)
+        #m.mqtt_client.publish('get_pos',str_pos)
 
         xyz = self.localOrientation.to_euler()
         xyz[2] = self.rot
@@ -290,18 +296,18 @@ class Master:
                      'Car_Green_proxy',
                      'Car_Blue_proxy'
                     )
-                )
+                ) 
 
-
-                if z <=2 and m.message == "b'1'":
+                if z <1 and m.message == "b'1'":
                     obj = scene.addObject(kind, self.roads[0])
                     car = Car(obj, way=s)
+                    # car.worldOrientation=(2.0,-20.0,0.0)
                     self.cars.add(car)
                     s.reach(car)
                     z=z+1
-                    m.message=''
+                    # m.message=''
 
-
+                #print(Car.get_x)          
 
         for r in self.roads:
             r.update(dt)
@@ -326,54 +332,61 @@ class mqttThread(threading.Thread):
             print ('No Connection')
         #self.fallbackLoopTime = fallbackLoopTime
         
-
     def stopped(self):
         return self.event.isSet()
 
     def stop(self):
         self.event.set()
 
-
     def mqtt_on_connect(self,client, userdata,flags, rc):
         self.mqtt_client.subscribe('addcar')
+        self.mqtt_client.subscribe('get_pos')
+        self.mqtt_client.subscribe('datasend')
 
 
     def mqtt_on_message(self,client, userdata, msg):
         self.message = str(msg.payload)
-        #print (message)
-        # if message == "b'1'":
+        print (self.message)
+        # if self.message == "b'1'":
         #     print('YES')
 
-    def publish(pos):
+    def pos_publish(pos):
         self.client.publish("get_pos",pos)
-
 
     def run(self):
         self.mqtt_client.loop_start()
         #self.event.wait(self.interval)
 
+def  screen_shot():
+    cont = bge.logic.getCurrentController()
+    own = cont.owner
+    scene = bge.logic.getCurrentScene()
+    if not 'init' in own:
+        own['init'] = 1
+        own['counter'] = 0
+
+    own['counter'] += 1
+
+    ######## APPROACH #1
+    #get frame using makeScreenshot()
+    frame_filename = "//frame" + str(own['counter']) + ".png"
+    bge.render.makeScreenshot(frame_filename)
+
+
+def  convey_photo():
+    files = {'image':open('/home/zhouzhou/blender/bge-traffic/frame1.png','rb')}
+    try:
+        r = requests.post('http://192.168.3.24:3000/api/tk1/picture',files=files)
+    except requests.exceptions.RequestException as e:
+        logging.error( str(e))
 
 
 M = Master()
 M.link_roads()
 update_master = lambda: M.update()
+# screen_shot()
+# time.sleep(5)
+# convey_photo()
 
 m = mqttThread()
 m.run()
-
-
-
-
-#cont = bge.logic.getCurrentController()
-#own = cont.owner
-#scene = bge.logic.getCurrentScene()
-#if not 'init' in own:
-#    own['init'] = 1
-#   own['counter'] = 0
-#
-#own['counter'] += 1
-#
-    ######### APPROACH #1
-    # get frame using makeScreenshot()
-#frame_filename = "//frame" + str(own['counter']) + ".png"
-#bge.render.makeScreenshot(frame_filename)
