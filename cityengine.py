@@ -39,6 +39,21 @@ Each Way has a traffic_light value, that Intersections set.
 from random import random, choice
 from math import hypot
 
+import sys
+sys.path.append('/usr/local/lib/python2.7/dist-packages')
+import paho.mqtt.client as mqtt
+
+import threading
+import socket
+from threading import Timer
+
+import requests
+import logging
+
+global traffic_light,flag
+traffic_light="green"
+flag=0
+
 MAX_POS = 9999.
 
 class Intersection:
@@ -92,13 +107,30 @@ class Way:
         """Returns distance from obstacle obstacle.pos or None if no obstacles
         are in sight"""
         obpos = MAX_POS # Obstacle position
+        global traffic_light,flag
+        if flag == 0:
+            if self.to :
+                flag=0
+            else:
+                m.mqtt_client.publish('trafficlight','no')
+                flag = 1;
 
         # Traffic lights
         if self.traffic_light == 'red':
             obpos = self.length
+            if traffic_light != 'red':
+                m.mqtt_client.publish('trafficlight','red')
+                traffic_light = 'red'
         elif self.traffic_light == 'yellow':
+            if traffic_light != 'yellow':
+                m.mqtt_client.publish('trafficlight','yellow')
+                traffic_light = 'yellow'
             if car.pos + car.safety_distance < self.length:
                 obpos = self.length
+        elif self.traffic_light == 'green':
+            if traffic_light != 'green':
+                m.mqtt_client.publish('trafficlight','green')
+                traffic_light = 'green'
 
         next_car_pos, _ = self.next_car(car)
         #print( str(next_car_pos) +"                 "+ str(car.pos) )
@@ -235,3 +267,48 @@ class Vehicle:
     def on_dead_end(self):
         """Called when leaving a dead end Way. e.g.: to destroy self."""
         pass
+
+
+class mqttThread(threading.Thread):
+    def __init__(self):
+        threading.Thread.__init__(self)
+        try:
+            self.mqtt_client = mqtt.Client()
+            self.mqtt_client.on_connect = self.mqtt_on_connect
+            self.mqtt_client.on_message = self.mqtt_on_message
+            self.message=''
+            self.mqtt_client.connect('192.168.3.24', 1883, 60)
+
+            
+        except socket.gaierror:
+            print ('No Connection')
+        #self.fallbackLoopTime = fallbackLoopTime
+        
+    def stopped(self):
+        return self.event.isSet()
+
+    def stop(self):
+        self.event.set()
+
+    def mqtt_on_connect(self,client, userdata,flags, rc):
+        self.mqtt_client.subscribe('addcar')
+        self.mqtt_client.subscribe('get_pos')
+        self.mqtt_client.subscribe('trafficlight')
+
+
+    def mqtt_on_message(self,client, userdata, msg):
+        self.message = str(msg.payload)
+        #print (message)
+        # if message == "b'1'":
+        #     print('YES')
+
+    # def pos_publish(pos):
+    #     self.client.publish("get_pos",pos)
+
+    def run(self):
+        self.mqtt_client.loop_start()
+        #self.event.wait(self.interval)
+
+
+m = mqttThread()
+m.run()
