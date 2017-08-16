@@ -208,6 +208,7 @@ class Car(bge.types.KX_GameObject, Vehicle):
     length = .7
     acceleration = 7.84 / 9.
     deceleration = 7.84 / 2. # Max possible with g=9.81m/s, roadfrictioncoeff=.8
+    ID = 0
     def __init__(self, old_owner, way):
         Vehicle.__init__(self, way)
         self.speed_mul = 1. - random() * .2
@@ -289,23 +290,26 @@ class Master:
 
         for s in self.spawns:
             if random() < .001666:
-                kind = choice(
-                    ('Car_Beige_proxy',
-                     'Car_Beige_proxy',
-                     'Car_Red_proxy',
-                     'Car_Green_proxy',
-                     'Car_Blue_proxy'
-                    )
-                ) 
+                # kind = choice(
+                #     ('Car_Beige_proxy',
+                #      'Car_Beige_proxy',
+                #      'Car_Red_proxy',
+                #      'Car_Green_proxy',
+                #      'Car_Blue_proxy'
+                #     )
+                # ) 
 
-                if z <1 and m.message == "b'1'":
+                if z <20 and m.message == "C":
+                    kind = m.name[ : -1]
+                    print(kind)
                     obj = scene.addObject(kind, self.roads[0])
                     car = Car(obj, way=s)
-                    # car.worldOrientation=(2.0,-20.0,0.0)
+                    car.ID = z
                     self.cars.add(car)
                     s.reach(car)
                     z=z+1
-                    # m.message=''
+
+                    m.message=''
 
                 #print(Car.get_x)          
 
@@ -325,7 +329,8 @@ class mqttThread(threading.Thread):
             self.mqtt_client.on_connect = self.mqtt_on_connect
             self.mqtt_client.on_message = self.mqtt_on_message
             self.message=''
-            self.mqtt_client.connect('192.168.3.24', 1883, 60)
+            self.name=''
+            self.mqtt_client.connect('localhost', 1883, 60)
 
             
         except socket.gaierror:
@@ -345,8 +350,11 @@ class mqttThread(threading.Thread):
 
 
     def mqtt_on_message(self,client, userdata, msg):
-        self.message = str(msg.payload)
-        print (self.message)
+        Str = str(msg.payload)
+        self.message = Str[11]
+        self.name = Str.split('"')[3]
+        print(self.message)
+        print(self.name)
         # if self.message == "b'1'":
         #     print('YES')
 

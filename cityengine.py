@@ -108,29 +108,31 @@ class Way:
         are in sight"""
         obpos = MAX_POS # Obstacle position
         global traffic_light,flag
-        if flag == 0:
-            if self.to :
-                flag=0
-            else:
-                m.mqtt_client.publish('trafficlight','no')
-                flag = 1;
+        if self.to :
+            flag=0
+        else:
+            if self.cars[0].exist == 1:
+                m.mqtt_client.publish('trafficlight',self.cars[0].name+str(self.cars[0].ID)+':no')
+                self.cars[0].exist=0
+                flag = 1
 
-        # Traffic lights
+        # send Traffic lights
         if self.traffic_light == 'red':
             obpos = self.length
-            if traffic_light != 'red':
-                m.mqtt_client.publish('trafficlight','red')
-                traffic_light = 'red'
+            # print(self.cars[0].name)
+            if self.cars[0].traffic_light != 'red':
+                m.mqtt_client.publish('trafficlight',self.cars[0].name+str(self.cars[0].ID)+':red')
+                self.cars[0].traffic_light = 'red'
         elif self.traffic_light == 'yellow':
-            if traffic_light != 'yellow':
-                m.mqtt_client.publish('trafficlight','yellow')
-                traffic_light = 'yellow'
+            if self.cars[0].traffic_light != 'yellow':
+                m.mqtt_client.publish('trafficlight',self.cars[0].name+str(self.cars[0].ID)+':yellow')
+                self.cars[0].traffic_light = 'yellow'
             if car.pos + car.safety_distance < self.length:
                 obpos = self.length
-        elif self.traffic_light == 'green':
-            if traffic_light != 'green':
-                m.mqtt_client.publish('trafficlight','green')
-                traffic_light = 'green'
+        elif self.cars[0].traffic_light == 'green':
+            if self.cars[0].traffic_light != 'green':
+                m.mqtt_client.publish('trafficlight',self.cars[0].name+str(self.cars[0].ID)+':green')
+                self.cars[0].traffic_light = 'green'
 
         next_car_pos, _ = self.next_car(car)
         #print( str(next_car_pos) +"                 "+ str(car.pos) )
@@ -206,6 +208,9 @@ class Vehicle:
     length = 4.
     acceleration = 7.84 / 2.
     deceleration = 7.84 # Max possible with g=9.81m/s, frictioncoeff=.8
+    traffic_light ='green'
+    exist = 1
+    ID = 0
 
     def __init__(self, way):
         self.pos = 0. # m along current way
@@ -277,7 +282,7 @@ class mqttThread(threading.Thread):
             self.mqtt_client.on_connect = self.mqtt_on_connect
             self.mqtt_client.on_message = self.mqtt_on_message
             self.message=''
-            self.mqtt_client.connect('192.168.3.24', 1883, 60)
+            self.mqtt_client.connect('localhost', 1883, 60)
 
             
         except socket.gaierror:
@@ -297,8 +302,9 @@ class mqttThread(threading.Thread):
 
 
     def mqtt_on_message(self,client, userdata, msg):
-        self.message = str(msg.payload)
-        #print (message)
+        Str = str(msg.payload)
+        self.message = Str[11]
+        print(self.message)
         # if message == "b'1'":
         #     print('YES')
 
